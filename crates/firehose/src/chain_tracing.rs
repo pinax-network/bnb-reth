@@ -75,6 +75,27 @@ pub struct ChainTracingConfig {
     /// `true` (BSC) maps a `Some(0)` header base fee to `None`; a non-zero base fee is preserved.
     /// `false` (mainnet Ethereum) forwards the header value unchanged.
     pub treat_zero_base_fee_as_absent: bool,
+
+    /// Chain-specific, deterministic finality for a block: given `(number, hash)` of the block
+    /// being emitted, return the `(number, hash)` of the block it considers finalized, or `None`
+    /// when unknown. Used by the live engine path and the ExEx runner in place of the node's
+    /// canonical finalized head.
+    ///
+    /// Why: the canonical finalized head is *node state* — it depends on which votes this node
+    /// had received when it executed the block, and it is not necessarily an ancestor of a
+    /// side-chain block being traced. On Ethereum PoS finality trails head by 64+ blocks so this
+    /// is harmless; on BSC fast finality trails by 1-3 blocks, which produced three field
+    /// symptoms: readers stamping different LIBs on identical blocks (the merger then files one
+    /// copy as "forked"), LIB stepping backwards within one reader, and a fork-branch block
+    /// carrying the canonical chain's finalized number so downstream forkdbs treated the wrong
+    /// block at that height as final.
+    ///
+    /// BSC sets this to the Parlia vote attestation carried by the block itself
+    /// (`snapshot(hash).vote_data.source`), which is identical on every node and lies on the
+    /// block's own ancestry by construction. When the resolver returns `None` the block is
+    /// emitted without a finalized ref, so fireeth falls back to its conservative
+    /// `block_num - 200` LIB rather than to node state.
+    pub finalized_for_block: Option<fn(u64, alloy_primitives::B256) -> Option<(u64, alloy_primitives::B256)>>,
 }
 
 static CHAIN_TRACING: OnceLock<ChainTracingConfig> = OnceLock::new();

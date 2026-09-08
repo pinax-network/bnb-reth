@@ -38,7 +38,11 @@ where
 
     tracer.on_block_start(firehose_tracer::types::BlockEvent {
         block: mapper::to_block_data(block.sealed_block()),
-        finalized: mapper::to_finalized_ref(ctx.provider().finalized_block_num_hash()),
+        finalized: mapper::finalized_ref_for_block(
+            block.number(),
+            block.hash(),
+            ctx.provider().finalized_block_num_hash().ok().flatten(),
+        ),
         flash_block: None,
     });
 

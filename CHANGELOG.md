@@ -9,6 +9,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+### Fixed
+
+- Finality advertised on emitted blocks (`FIRE BLOCK` finalized ref, hence the one-block LIB) can
+  now be derived deterministically per block through the new
+  `ChainTracingConfig::finalized_for_block` hook instead of the node's canonical finalized head.
+  The canonical head is node state (vote arrival timing) and is not necessarily an ancestor of a
+  side-chain block being traced; on BSC fast finality this produced readers disagreeing on the LIB
+  of identical blocks, LIB stepping backwards within one reader, and a fork-branch block stamped
+  with the canonical chain's finalized number (a downstream forkdb then treated the wrong block at
+  that height as final — bsc mainnet block 120653740, 2026-09-08 08:24 UTC). Chains without the
+  hook keep the previous behaviour; the staged-sync path is unchanged.
+
 This fork is consumed as a library by
 [streamingfast/reth-bsc](https://github.com/streamingfast/reth-bsc), which builds the
 Firehose-instrumented `reth-bsc` binary and Docker image; no binaries or images are

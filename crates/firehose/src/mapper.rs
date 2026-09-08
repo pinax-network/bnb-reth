@@ -153,6 +153,30 @@ pub fn finalized_ref_from_num_hash(
     })
 }
 
+/// Finalized ref to advertise for the block `(number, hash)` about to be traced.
+///
+/// When the chain registered [`ChainTracingConfig::finalized_for_block`](crate::ChainTracingConfig),
+/// finality is derived deterministically from the block itself and the node's canonical
+/// finalized head is ignored entirely — including when the resolver yields `None`, so a
+/// block whose finality is unknown is never stamped with node state. A ref at or beyond the
+/// block's own height is discarded as inconsistent. Chains without a resolver keep the previous
+/// behaviour (`canonical_finalized`, see [`finalized_ref_from_num_hash`]).
+pub fn finalized_ref_for_block(
+    number: u64,
+    hash: alloy_primitives::B256,
+    canonical_finalized: Option<alloy_eips::BlockNumHash>,
+) -> Option<firehose_tracer::types::FinalizedBlockRef> {
+    if let Some(resolver) = crate::chain_tracing_config().and_then(|c| c.finalized_for_block) {
+        return resolver(number, hash)
+            .filter(|(finalized_number, _)| *finalized_number < number)
+            .map(|(finalized_number, finalized_hash)| firehose_tracer::types::FinalizedBlockRef {
+                number: finalized_number,
+                hash: Some(finalized_hash),
+            });
+    }
+    finalized_ref_from_num_hash(canonical_finalized)
+}
+
 fn to_uncle_data<H>(uncle: &H) -> UncleData
 where
     H: ConsensusBlockHeader + Sealable,

@@ -425,7 +425,9 @@ where
             if reth_firehose::is_tracer_initialized() {
                 match &input {
                     BlockOrPayload::Block(sealed) => {
-                        let finalized = reth_firehose::mapper::finalized_ref_from_num_hash(
+                        let finalized = reth_firehose::mapper::finalized_ref_for_block(
+                            sealed.header().number(),
+                            sealed.hash(),
                             ctx.canonical_in_memory_state().get_finalized_num_hash(),
                         );
                         Some(reth_firehose::FirehoseBlockTracer::start::<N>(sealed, finalized))
@@ -804,7 +806,9 @@ where
                     _ => None,
                 };
                 sealed.and_then(|sealed| {
-                    let finalized = reth_firehose::mapper::finalized_ref_from_num_hash(
+                    let finalized = reth_firehose::mapper::finalized_ref_for_block(
+                        sealed.header().number(),
+                        sealed.hash(),
                         ctx.canonical_in_memory_state().get_finalized_num_hash(),
                     );
                     Some(reth_firehose::FirehoseBlockTracer::start::<N>(sealed, finalized))

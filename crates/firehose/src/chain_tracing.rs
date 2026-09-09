@@ -76,10 +76,15 @@ pub struct ChainTracingConfig {
     /// `false` (mainnet Ethereum) forwards the header value unchanged.
     pub treat_zero_base_fee_as_absent: bool,
 
-    /// Chain-specific, deterministic finality for a block: given `(number, hash)` of the block
-    /// being emitted, return the `(number, hash)` of the block it considers finalized, or `None`
-    /// when unknown. Used by the live engine path and the ExEx runner in place of the node's
-    /// canonical finalized head.
+    /// Chain-specific, deterministic finality for a block: given `(number, hash, parent_hash)` of
+    /// the block being emitted, return the `(number, hash)` of the block it considers finalized,
+    /// or `None` when unknown. Used by the live engine path and the ExEx runner in place of the
+    /// node's canonical finalized head.
+    ///
+    /// The tracer starts before the block is executed and before consensus has validated its
+    /// header against the parent, so chain state keyed by the block's own hash (e.g. a Parlia
+    /// snapshot) does not exist yet; `parent_hash` is provided so the resolver can key off the
+    /// parent, whose state is complete.
     ///
     /// Why: the canonical finalized head is *node state* — it depends on which votes this node
     /// had received when it executed the block, and it is not necessarily an ancestor of a
@@ -90,12 +95,14 @@ pub struct ChainTracingConfig {
     /// carrying the canonical chain's finalized number so downstream forkdbs treated the wrong
     /// block at that height as final.
     ///
-    /// BSC sets this to the Parlia vote attestation carried by the block itself
-    /// (`snapshot(hash).vote_data.source`), which is identical on every node and lies on the
-    /// block's own ancestry by construction. When the resolver returns `None` the block is
+    /// BSC sets this to the Parlia vote attestation carried by the block's parent
+    /// (`snapshot(parent_hash).vote_data.source`), which is identical on every node and lies on
+    /// the block's own ancestry by construction. When the resolver returns `None` the block is
     /// emitted without a finalized ref, so fireeth falls back to its conservative
     /// `block_num - 200` LIB rather than to node state.
-    pub finalized_for_block: Option<fn(u64, alloy_primitives::B256) -> Option<(u64, alloy_primitives::B256)>>,
+    pub finalized_for_block: Option<
+        fn(u64, alloy_primitives::B256, alloy_primitives::B256) -> Option<(u64, alloy_primitives::B256)>,
+    >,
 }
 
 static CHAIN_TRACING: OnceLock<ChainTracingConfig> = OnceLock::new();

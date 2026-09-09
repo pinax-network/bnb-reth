@@ -41,6 +41,7 @@ where
         finalized: mapper::finalized_ref_for_block(
             block.number(),
             block.hash(),
+            alloy_consensus::BlockHeader::parent_hash(block.header()),
             ctx.provider().finalized_block_num_hash().ok().flatten(),
         ),
         flash_block: None,

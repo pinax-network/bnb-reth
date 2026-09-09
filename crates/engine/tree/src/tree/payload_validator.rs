@@ -428,6 +428,7 @@ where
                         let finalized = reth_firehose::mapper::finalized_ref_for_block(
                             sealed.header().number(),
                             sealed.hash(),
+                            sealed.header().parent_hash(),
                             ctx.canonical_in_memory_state().get_finalized_num_hash(),
                         );
                         Some(reth_firehose::FirehoseBlockTracer::start::<N>(sealed, finalized))
@@ -809,6 +810,7 @@ where
                     let finalized = reth_firehose::mapper::finalized_ref_for_block(
                         sealed.header().number(),
                         sealed.hash(),
+                        sealed.header().parent_hash(),
                         ctx.canonical_in_memory_state().get_finalized_num_hash(),
                     );
                     Some(reth_firehose::FirehoseBlockTracer::start::<N>(sealed, finalized))

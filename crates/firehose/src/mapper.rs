@@ -153,7 +153,7 @@ pub fn finalized_ref_from_num_hash(
     })
 }
 
-/// Finalized ref to advertise for the block `(number, hash)` about to be traced.
+/// Finalized ref to advertise for the block `(number, hash, parent_hash)` about to be traced.
 ///
 /// When the chain registered [`ChainTracingConfig::finalized_for_block`](crate::ChainTracingConfig),
 /// finality is derived deterministically from the block itself and the node's canonical
@@ -164,10 +164,11 @@ pub fn finalized_ref_from_num_hash(
 pub fn finalized_ref_for_block(
     number: u64,
     hash: alloy_primitives::B256,
+    parent_hash: alloy_primitives::B256,
     canonical_finalized: Option<alloy_eips::BlockNumHash>,
 ) -> Option<firehose_tracer::types::FinalizedBlockRef> {
     if let Some(resolver) = crate::chain_tracing_config().and_then(|c| c.finalized_for_block) {
-        return resolver(number, hash)
+        return resolver(number, hash, parent_hash)
             .filter(|(finalized_number, _)| *finalized_number < number)
             .map(|(finalized_number, finalized_hash)| firehose_tracer::types::FinalizedBlockRef {
                 number: finalized_number,

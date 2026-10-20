@@ -556,9 +556,23 @@ impl<R, ChainSpec: EthChainSpec> LaunchContextWith<Attached<WithConfigs<ChainSpe
     where
         ChainSpec: reth_chainspec::EthereumHardforks,
     {
-        PrunerBuilder::new(self.prune_config())
-            .delete_limit(self.chain_spec().prune_delete_limit())
-            .timeout(PrunerBuilder::DEFAULT_TIMEOUT)
+        // Pinax: per-node overrides for the live pruner's per-run limits. Unset (or
+        // unparsable) keeps upstream behaviour: the chain spec's delete limit and
+        // `PrunerBuilder::DEFAULT_TIMEOUT`. On BSC a block carries ~3,100 storage
+        // changesets and takes ~65 ms to prune, so the defaults clear ~2 blocks per run
+        // while the chain adds ~27 (pinax-stories#5290).
+        let delete_limit = std::env::var("RETH_PRUNE_DELETE_LIMIT")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or_else(|| self.chain_spec().prune_delete_limit());
+        let timeout = std::env::var("RETH_PRUNE_TIMEOUT_MS")
+            .ok()
+            .and_then(|v| v.parse::<u64>().ok())
+            .map(Duration::from_millis)
+            .unwrap_or(PrunerBuilder::DEFAULT_TIMEOUT);
+        info!(target: "reth::cli", delete_limit, ?timeout, "Live pruner limits");
+
+        PrunerBuilder::new(self.prune_config()).delete_limit(delete_limit).timeout(timeout)
     }
 
     /// Loads the JWT secret for the engine API
